@@ -3617,7 +3617,7 @@ function renderFiles(files) {
   // 只看本对话：就一个文件夹（加它自己的子文件夹），按时间分段纯属多一层。本对话那格置顶，子文件夹按名字
   if (sc.scoped) {
     for (const dir of Object.keys(groups).sort((x, y) => (x === curDir ? -1 : y === curDir ? 1 : x.localeCompare(y, "zh")))) {
-      const label = dir === curDir ? dir : dir.slice(curDir.length + 1);
+      const label = dir === curDir || !curDir ? dir : dir.slice(curDir.length + 1);
       html += dirHead(dir, label, groups[dir].length, dir === curDir, `在${fileMgrName()}中打开这个文件夹`, resCount(groups[dir]));
       if (openDirs.has(dir)) html += groups[dir].sort(resFirst((a, b2) => a.name.localeCompare(b2.name, "zh"))).map(f => fileRow(f, true)).join("");
     }

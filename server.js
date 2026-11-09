@@ -2586,7 +2586,7 @@ app.post("/api/settings", (req, res) => {
     // 不动任何已经配好的东西——万一判断错了，用户自己关掉就全恢复。
     if (typeof b.intranet === "boolean") config.intranet = b.intranet;
     if (b.agent) {
-      if (b.agent.max_steps) config.agent.max_steps = Math.max(1, Math.min(100, +b.agent.max_steps));
+      if (b.agent.max_steps) config.agent.max_steps = Math.max(1, Math.min(1000, +b.agent.max_steps));
       if (b.agent.tool_timeout_ms) config.agent.tool_timeout_ms = Math.max(5000, +b.agent.tool_timeout_ms);
       if (b.agent.max_runtime_ms) config.agent.max_runtime_ms = Math.max(60000, +b.agent.max_runtime_ms);
       if (b.agent.auto_continue_rounds !== undefined) config.agent.auto_continue_rounds = Math.max(0, Math.min(20, Math.round(+b.agent.auto_continue_rounds) || 0));

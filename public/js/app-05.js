@@ -3328,7 +3328,7 @@ async function renderAgentPane(pane, s) {
       <div class="t">执行上限</div>
       <div class="f">一个任务最多做几步</div>
       <div class="d" style="margin-bottom:6px">默认 25</div>
-      <input id="ag-steps" type="number" min="1" max="100" value="${s.agent.max_steps}">
+      <input id="ag-steps" type="number" min="1" max="1000" value="${s.agent.max_steps}">
       <div class="f">一个任务最多跑几分钟</div>
       <div class="d" style="margin-bottom:6px">算上它派出去的子任务，到点就收尾（默认 30）</div>
       <input id="ag-runtime" type="number" min="1" value="${Math.round((s.agent.max_runtime_ms || 1800000) / 60000)}">
