@@ -29,6 +29,32 @@ const org = require("./org");
 const DATA_DIR = process.env.OPENWORKBUDDY_DATA_DIR || dataPath("data");
 const FILE = path.join(DATA_DIR, "account-spaces.json");
 
+/**
+ * 外部（主系统的单点登录中间件）指定的「这个账号当前对应哪个案件目录」。
+ *
+ * 文件跟 account-spaces.json 放在一起，只由中间件写、这里只读；没有这个文件时
+ * 一切行为与出厂版逐字一致。值是绝对路径，而且必须此刻确实是目录才认——
+ * 案件目录被删掉后自动失效，回落到这个账号自己的 accounts/<账号>，
+ * 不会把一条过期的记录变成「工作目录建不出来」。
+ */
+const FORCED_FILE = path.join(DATA_DIR, "account-workspaces.json");
+let forcedMemo = { at: 0, stamp: -1, map: {} };
+function forcedOf(username) {
+  const now = Date.now();
+  let stamp = -1;
+  try { stamp = fs.statSync(FORCED_FILE).mtimeMs; } catch {}
+  // 按 mtime 失效：中间件刚写完就跳过来时，不能还拿上一秒那份旧表
+  if (now - forcedMemo.at >= 1000 || stamp !== forcedMemo.stamp) {
+    let m = {};
+    try { m = store.readJson(FORCED_FILE, {}) || {}; } catch {}
+    forcedMemo = { at: now, stamp, map: m && typeof m === "object" && !Array.isArray(m) ? m : {} };
+  }
+  const v = forcedMemo.map[String(username || "")];
+  if (typeof v !== "string" || !path.isAbsolute(v)) return "";
+  try { return fs.statSync(v).isDirectory() ? v : ""; } catch { return ""; }
+}
+
+
 /** 默认组织各账号的工作目录都在这下面一层 */
 function accountsDir() {
   return dataPath("accounts");
@@ -89,6 +115,11 @@ function forget() {
  * @param {{ id: string }} [known] 调用方手上已经读好的这个人的组织（请求上挂着的那份），省一次读 orgs.json
  */
 function rootOf(user, known) {
+  const own = rootOfOwn(user, known);
+  return forcedOf(user && user.username) || own;
+}
+
+function rootOfOwn(user, known) {
   if (!user || !user.username) throw new Error("没有登录账号");
   const id = org.orgIdOf(user);
   const o = known && known.id === id ? known : org.getOrg(id);
@@ -124,6 +155,11 @@ function homes() {
       if (!o) continue; // 组织已经删了：它的根不归任何人，别人也绑不到那儿
       list.push(path.join(parentOf(o), e.dir));
     }
+    // 外部指定的案件工作目录也算「分出去的根」：沙箱不藏它、appRoot 也认得出
+    for (const name of Object.keys(table().users)) {
+      const forced = forcedOf(name);
+      if (forced) list.push(forced);
+    }
   } catch {}
   homesMemo = { at: now, list };
   return list;
@@ -131,6 +167,8 @@ function homes() {
 
 /** 这个账号已经分到的个人目录；没分过回空串（不分配） */
 function knownRootOf(username) {
+  const forced = forcedOf(username);
+  if (forced) return forced;
   const e = table().users[username];
   if (!e || !e.dir) return "";
   try {
